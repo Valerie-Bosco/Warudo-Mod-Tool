@@ -109,45 +109,30 @@ namespace Warudo.Editor {
                 it.Colliders.Select(c => it.transform.TransformPoint(c.Offset)).ToArray());
 
             if (!normalizedBones) {
-                // Ask user if they want to normalize bones
-                if (!EditorUtility.DisplayDialog(
-                    "Normalize Bones",
-                    "The character's bones are not normalized. Normalization is recommended for better animation compatibility.\n\nDo you want to normalize the bones?",
-                    "Normalize",
-                    "Skip"
-                )) {
-                    // User chose to skip normalization
-                    Debug.Log("User chose to skip bone normalization.");
-                } else {
-                    // User chose to normalize bones
-                    var animator = selectedCharacter.GetComponent<Animator>();
-                    BoneNormalization.Apply(selectedCharacter.gameObject, animator);
-
-                    // Store the created avatars and meshes in the mod directory
-                    var avatar = animator.avatar;
-                    var avatarPath = Path.Combine(basePath, "Avatar.asset");
-                    AssetDatabase.CreateAsset(avatar, avatarPath);
-
-                    var skinnedMeshRenderers = selectedCharacter.GetComponentsInChildren<SkinnedMeshRenderer>();
-                    foreach (var smr in skinnedMeshRenderers) {
-                        var mesh = smr.sharedMesh;
-                        if (mesh.name.EndsWith(".normalized")) {
-                            var meshPath = Path.Combine(basePath, mesh.name[..^".normalized".Length] + ".asset");
-                            AssetDatabase.CreateAsset(mesh, meshPath);
-                        }
+                var animator = selectedCharacter.GetComponent<Animator>();
+                BoneNormalization.Apply(selectedCharacter.gameObject, animator);
+                
+                // Store the created avatars and meshes in the mod directory
+                var avatar = animator.avatar;
+                var avatarPath = Path.Combine(basePath, "Avatar.asset");
+                AssetDatabase.CreateAsset(avatar, avatarPath);
+                
+                var skinnedMeshRenderers = selectedCharacter.GetComponentsInChildren<SkinnedMeshRenderer>();
+                foreach (var smr in skinnedMeshRenderers) {
+                    var mesh = smr.sharedMesh;
+                    if (mesh.name.EndsWith(".normalized")) {
+                        var meshPath = Path.Combine(basePath, mesh.name[..^".normalized".Length] + ".asset");
+                        AssetDatabase.CreateAsset(mesh, meshPath);
                     }
-
-                    var meshFilters = selectedCharacter.GetComponentsInChildren<MeshFilter>();
-                    foreach (var mf in meshFilters) {
-                        var mesh = mf.sharedMesh;
-                        if (mesh.name.EndsWith(".normalized")) {
-                            var meshPath = Path.Combine(basePath, mesh.name[..^".normalized".Length] + ".asset");
-                            AssetDatabase.CreateAsset(mesh, meshPath);
-                        }
+                }
+                
+                var meshFilters = selectedCharacter.GetComponentsInChildren<MeshFilter>();
+                foreach (var mf in meshFilters) {
+                    var mesh = mf.sharedMesh;
+                    if (mesh.name.EndsWith(".normalized")) {
+                        var meshPath = Path.Combine(basePath, mesh.name[..^".normalized".Length] + ".asset");
+                        AssetDatabase.CreateAsset(mesh, meshPath);
                     }
-
-                    // Update normalizedBones flag for the rest of the setup process
-                    normalizedBones = true;
                 }
             }
             

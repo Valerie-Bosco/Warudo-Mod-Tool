@@ -10,17 +10,14 @@ using VRM;
 using Warudo.Core.Utils;
 using Object = UnityEngine.Object;
 
-namespace Warudo.Plugins.Core.Assets.Character
-{
+namespace Warudo.Plugins.Core.Assets.Character {
     // Much of the code here is brought from UniVRM. Thanks!
-    public static class BoneNormalization
-    {
+    public static class BoneNormalization {
         /// <summary>
         /// Apply hierarchical bone normalization by storing non-standardized rotations in HumanBones
         /// and propagating inverse rotations to children to maintain their world positions.
         /// </summary>
-        public static void Apply(GameObject go, Animator animator)
-        {
+        public static void Apply(GameObject go, Animator animator) {
             ApplyHierarchicalNormalization(go, animator);
         }
 
@@ -30,28 +27,22 @@ namespace Warudo.Plugins.Core.Assets.Character
         /// 2. Setting the HumanBone's local rotation to identity
         /// 3. Applying the inverse rotation to children to preserve their world positions
         /// 4. Recursively processing HumanBone children
-        /// 5. Rebuilding the Avatar with normalized bones
         /// </summary>
-        private static void ApplyHierarchicalNormalization(GameObject go, Animator animator)
-        {
+        private static void ApplyHierarchicalNormalization(GameObject go, Animator animator) {
             // Build a HashSet of all HumanBone transforms for quick lookup
             var humanBoneSet = new HashSet<Transform>();
-            for (var i = 0; i < (int)HumanBodyBones.LastBone; i++)
-            {
+            for (var i = 0; i < (int)HumanBodyBones.LastBone; i++) {
                 var bone = animator.GetBoneTransform((HumanBodyBones)i);
-                if (bone != null)
-                {
+                if (bone != null) {
                     humanBoneSet.Add(bone);
                 }
             }
 
             // Collect all HumanBone transforms in hierarchy order (parent to child)
             var humanBones = new List<(HumanBodyBones boneType, Transform transform)>();
-            for (var i = 0; i < (int)HumanBodyBones.LastBone; i++)
-            {
+            for (var i = 0; i < (int)HumanBodyBones.LastBone; i++) {
                 var bone = animator.GetBoneTransform((HumanBodyBones)i);
-                if (bone != null)
-                {
+                if (bone != null) {
                     humanBones.Add(((HumanBodyBones)i, bone));
                 }
             }
@@ -61,10 +52,8 @@ namespace Warudo.Plugins.Core.Assets.Character
 
             Debug.Log($"Normalizing {humanBones.Count} humanoid bones hierarchically...");
 
-            foreach (var (boneType, boneTransform) in humanBones)
-            {
-                if (boneTransform.localRotation == Quaternion.identity)
-                {
+            foreach (var (boneType, boneTransform) in humanBones) {
+                if (boneTransform.localRotation == Quaternion.identity) {
                     continue; // Already normalized
                 }
 
@@ -79,79 +68,29 @@ namespace Warudo.Plugins.Core.Assets.Character
             }
 
             Debug.Log("Bone normalization complete.");
-
-            // Rebuild avatar with normalized bones
-            RebuildAvatar(go, animator);
-        }
-
-        /// <summary>
-        /// Rebuilds the Avatar with the current (normalized) bone configuration.
-        /// </summary>
-        private static void RebuildAvatar(GameObject go, Animator animator)
-        {
-            // Create avatar description from current bones
-            var avatarDescription = AvatarDescription.Create();
-            var vrmHuman = go.GetComponent<VRMHumanoidDescription>();
-
-            // Copy VRM human description settings if available
-            if (vrmHuman != null && vrmHuman.Description != null)
-            {
-                avatarDescription.armStretch = vrmHuman.Description.armStretch;
-                avatarDescription.legStretch = vrmHuman.Description.legStretch;
-                avatarDescription.upperArmTwist = vrmHuman.Description.upperArmTwist;
-                avatarDescription.lowerArmTwist = vrmHuman.Description.lowerArmTwist;
-                avatarDescription.upperLegTwist = vrmHuman.Description.upperLegTwist;
-                avatarDescription.lowerLegTwist = vrmHuman.Description.lowerLegTwist;
-                avatarDescription.feetSpacing = vrmHuman.Description.feetSpacing;
-                avatarDescription.hasTranslationDoF = vrmHuman.Description.hasTranslationDoF;
-            }
-
-            // Set human bones from current animator
-            var humanBones = new Dictionary<HumanBodyBones, Transform>();
-            for (var i = 0; i < (int)HumanBodyBones.LastBone; i++)
-            {
-                var bone = animator.GetBoneTransform((HumanBodyBones)i);
-                if (bone != null)
-                {
-                    humanBones[(HumanBodyBones)i] = bone;
-                }
-            }
-            avatarDescription.SetHumanBones(humanBones);
-
-            // Create new avatar
-            var avatar = avatarDescription.CreateAvatarAndSetup(go.transform);
-            avatar.name = go.name + ".normalized";
-            animator.avatar = avatar;
-
-            Debug.Log($"Rebuilt avatar: {avatar.name}");
         }
 
         /// <summary>
         /// Normalizes a bone and recursively updates its children to preserve world positions.
         /// </summary>
-        private static void NormalizeBoneAndChildren(Transform boneTransform, HashSet<Transform> humanBoneSet)
-        {
+        private static void NormalizeBoneAndChildren(Transform boneTransform, HashSet<Transform> humanBoneSet) {
             var originalRotation = boneTransform.localRotation;
 
             // If the bone is already normalized, no need to process
-            if (originalRotation == Quaternion.identity)
-            {
+            if (originalRotation == Quaternion.identity) {
                 return;
             }
 
             // First, recursively process all HumanBone children first (bottom-up approach)
             var humanBoneChildren = new List<Transform>();
-            foreach (Transform child in boneTransform)
-            {
-                if (humanBoneSet.Contains(child))
-                {
+            foreach (Transform child in boneTransform) {
+                if (humanBoneSet.Contains(child)) {
                     humanBoneChildren.Add(child);
                 }
             }
 
             // Process HumanBone children first
-            foreach (var child in humanBoneChildren)
-            {
+            foreach (var child in humanBoneChildren) {
                 NormalizeBoneAndChildren(child, humanBoneSet);
             }
 
@@ -163,10 +102,8 @@ namespace Warudo.Plugins.Core.Assets.Character
 
             // Apply inverse rotation to all direct children (both HumanBones and non-HumanBones)
             // to preserve their world positions
-            foreach (Transform child in boneTransform)
-            {
-                if (!humanBoneChildren.Contains(child))
-                {
+            foreach (Transform child in boneTransform) {
+                if (!humanBoneChildren.Contains(child)) {
                     // For non-HumanBone children, apply the inverse rotation
                     child.localRotation = inverseRotation * child.localRotation;
                 }
@@ -177,12 +114,10 @@ namespace Warudo.Plugins.Core.Assets.Character
         /// <summary>
         /// Gets the hierarchy depth of a transform (root = 0).
         /// </summary>
-        private static int GetHierarchyDepth(Transform transform)
-        {
+        private static int GetHierarchyDepth(Transform transform) {
             var depth = 0;
             var current = transform;
-            while (current.parent != null)
-            {
+            while (current.parent != null) {
                 depth++;
                 current = current.parent;
             }
@@ -190,12 +125,10 @@ namespace Warudo.Plugins.Core.Assets.Character
         }
 
         // Legacy method for reference (original implementation)
-        private static void ApplyLegacy(GameObject go, Animator animator)
-        {
+        private static void ApplyLegacy(GameObject go, Animator animator) {
             var (normalized, boneMap) = NormalizeHierarchy(go, animator);
 
-            foreach (var src in go.transform.Traverse())
-            {
+            foreach (var src in go.transform.Traverse()) {
                 Transform dst;
                 if (!boneMap.TryGetValue(src, out dst))
                 {
@@ -205,42 +138,36 @@ namespace Warudo.Plugins.Core.Assets.Character
                 NormalizeSkinnedMesh(src, dst, boneMap);
                 NormalizeNoneSkinnedMesh(src, dst);
             }
-
-            foreach (var (fromBone, toBone) in boneMap)
-            {
+            
+            foreach (var (fromBone, toBone) in boneMap) {
                 fromBone.localRotation = toBone.localRotation;
                 fromBone.localPosition = toBone.localPosition;
             }
 
-            if (Application.isPlaying)
-            {
+            if (Application.isPlaying) {
                 // Reset dynamic bones
                 go.GetComponentsInChildren<DynamicBone>().ForEach(it => it.SetupParticles());
             }
 
             // Rebuild avatar, and reset bones again.
             // I don't know why this works.jpg
-
+            
             var avatar = BuildAvatarDescription(go, animator, boneMap).CreateAvatarAndSetup(go.transform);
             avatar.name = go.name + ".normalized";
             animator.avatar = avatar;
-
-            foreach (var (fromBone, toBone) in boneMap)
-            {
+            
+            foreach (var (fromBone, toBone) in boneMap) {
                 fromBone.localRotation = toBone.localRotation;
                 fromBone.localPosition = toBone.localPosition;
             }
-
-            if (Application.isEditor)
-            {
+            
+            if (Application.isEditor) {
                 Object.DestroyImmediate(normalized);
-            }
-            else
-            {
+            } else {
                 Object.Destroy(normalized);
             }
         }
-
+        
         private static (GameObject, Dictionary<Transform, Transform>) NormalizeHierarchy(GameObject go, Animator animator)
         {
             var boneMap = new Dictionary<Transform, Transform>();
@@ -255,8 +182,7 @@ namespace Warudo.Plugins.Core.Assets.Character
             return (normalized, boneMap);
         }
 
-        private static AvatarDescription BuildAvatarDescription(GameObject go, Animator animator, Dictionary<Transform, Transform> boneMap)
-        {
+        private static AvatarDescription BuildAvatarDescription(GameObject go, Animator animator, Dictionary<Transform, Transform> boneMap) {
             var srcHumanBones = Enum.GetValues(typeof(HumanBodyBones))
                 .Cast<HumanBodyBones>()
                 .Where(x => x != HumanBodyBones.LastBone)
@@ -267,7 +193,7 @@ namespace Warudo.Plugins.Core.Assets.Character
                 srcHumanBones
                     .Where(x => boneMap.ContainsKey(x.Value))
                     .ToDictionary(x => x.Key, x => boneMap[x.Value]);
-
+            
             var vrmHuman = go.GetComponent<VRMHumanoidDescription>();
             var avatarDescription = AvatarDescription.Create();
             if (vrmHuman != null && vrmHuman.Description != null)
@@ -301,10 +227,9 @@ namespace Warudo.Plugins.Core.Assets.Character
                     CopyAndBuild(child, dstChild.transform, boneMap);
                 }
             }
-        }
+        } 
 
-        private static void NormalizeSkinnedMesh(Transform src, Transform dst, Dictionary<Transform, Transform> boneMap)
-        {
+        private static void NormalizeSkinnedMesh(Transform src, Transform dst, Dictionary<Transform, Transform> boneMap) {
             var srcRenderer = src.GetComponent<SkinnedMeshRenderer>();
             if (srcRenderer == null
                 || !srcRenderer.enabled
@@ -314,19 +239,18 @@ namespace Warudo.Plugins.Core.Assets.Character
                 // 有効なSkinnedMeshRendererが無かった
                 return;
             }
-
+            
             var srcMesh = srcRenderer.sharedMesh;
             var originalSrcMesh = srcMesh;
-
+            
             // 元の Transform[] bones から、無効なboneを取り除いて前に詰めた配列を作る
             var dstBones = srcRenderer.bones
                 .Where(x => x != null && boneMap.ContainsKey(x))
                 .Select(x => boneMap[x])
                 .ToArray();
-
+            
             var hasBoneWeight = srcRenderer.bones != null && srcRenderer.bones.Length > 0;
-            if (!hasBoneWeight)
-            {
+            if (!hasBoneWeight) {
                 srcMesh = srcMesh.Copy(true);
                 var bw = new BoneWeight
                 {
@@ -351,7 +275,7 @@ namespace Warudo.Plugins.Core.Assets.Character
             var mesh = srcMesh.Copy(false);
             mesh.name = srcMesh.name + ".normalized";
             srcRenderer.BakeMesh(mesh);
-
+            
             var blendShapeValues = new Dictionary<int, float>();
             for (var i = 0; i < srcMesh.blendShapeCount; i++)
             {
@@ -361,7 +285,7 @@ namespace Warudo.Plugins.Core.Assets.Character
 
             // 新しい骨格のボーンウェイトを作成する
             mesh.boneWeights = MapBoneWeight(srcMesh.boneWeights, boneMap, srcRenderer.bones, dstBones);
-
+            
             // recalc bindposes
             mesh.bindposes = dstBones.Select(x => x.worldToLocalMatrix * dst.transform.localToWorldMatrix).ToArray();
 
@@ -484,12 +408,12 @@ namespace Warudo.Plugins.Core.Assets.Character
                     }
                 }
             }
-
+            
             // End of BlendShapes
 
             //srcRenderer.bones = dstBones;
             srcRenderer.sharedMesh = mesh;
-
+            
 
             if (!hasBoneWeight)
             {
@@ -498,7 +422,7 @@ namespace Warudo.Plugins.Core.Assets.Character
                 srcRenderer.sharedMesh = originalSrcMesh;
             }
         }
-
+        
         private static void NormalizeNoneSkinnedMesh(Transform src, Transform dst)
         {
             var srcFilter = src.GetComponent<MeshFilter>();
@@ -594,7 +518,7 @@ namespace Warudo.Plugins.Core.Assets.Character
 
             return newBoneWeights;
         }
-
+        
         private static bool CopyOrDropWeight(int[] indexMap, int srcIndex, float weight, Action<int, float> setter)
         {
             if (srcIndex < 0 || srcIndex >= indexMap.Length)
