@@ -37,6 +37,7 @@ jobs:
           unityVersion: auto
           targetPlatform: StandaloneWindows64
           buildMethod: CI.UpmMetaPublisher.Run
+          customImage: unityci/editor:windows-2021.3.45f2-base-3.2.2
           customParameters: -packageSource "${{ github.workspace }}/package-repo" -publishRoot "${{ github.workspace }}/generated-upm"
           allowDirtyBuild: true
 
