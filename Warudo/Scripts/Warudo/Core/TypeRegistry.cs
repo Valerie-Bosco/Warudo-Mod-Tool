@@ -125,6 +125,20 @@ namespace Warudo.Core {
         private readonly Dictionary<Type, EnumType> enumTypes = new();
 
         public EnumType GetSerializedEnumType(Type enumType) {
+            if (!enumType.IsEnum && enumType.FullName != null) {
+                // In hot-reload scenarios, duplicate full names can exist across assemblies.
+                // If we hit a non-enum duplicate, resolve the same full name to an actual enum.
+                foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
+                    try {
+                        var resolved = assembly.GetTypes().FirstOrDefault(it => it.FullName == enumType.FullName && it.IsEnum);
+                        if (resolved == null) continue;
+                        enumType = resolved;
+                        break;
+                    } catch {
+                        // ignored
+                    }
+                }
+            }
             if (!enumType.IsEnum) throw new Exception($"{enumType.FriendlyFullName()} is not an enum type");
             if (enumTypes.ContainsKey(enumType)) return enumTypes[enumType].Clone();
             var data = new EnumType();

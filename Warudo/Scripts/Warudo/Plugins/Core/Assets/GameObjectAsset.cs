@@ -22,6 +22,7 @@ namespace Warudo.Plugins.Core.Assets
 
         public Vector3 EndOfFrameWorldScale { get; private set; }
 
+        public event EventHandler? TransformGizmoUpdated;
         protected abstract GameObject CreateGameObject();
         protected override void OnCreate()
         {

@@ -34,13 +34,13 @@ namespace Warudo_Mod_Tools.Generated
             UMod.BuildEngine.ModToolsUtil.ShowToolsWindow(typeof(Warudo.Editor.SetupCharacterWindow));
         }
         
-        [UnityEditor.MenuItem("Warudo/Mod Settings", priority=43)]
+        [UnityEditor.MenuItem("Warudo/Mod Settings", priority=83)]
         internal static void Menu_Mod_Settings()
         {
             UMod.BuildEngine.ModToolsUtil.ShowToolsWindow(typeof(UMod.Exporter.SettingsWindow));
         }
         
-        [UnityEditor.MenuItem("Warudo/Build Mod %#b", priority=44)]
+        [UnityEditor.MenuItem("Warudo/Build Mod %#b", priority=84)]
         internal static void Menu_Build_Mod___b()
         {
             UMod.ModTools.Export.ExportSettings settings = UMod.ModTools.Export.ExportSettings.Active.Load();

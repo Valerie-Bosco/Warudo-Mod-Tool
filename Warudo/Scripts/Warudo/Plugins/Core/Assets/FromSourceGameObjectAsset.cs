@@ -4,6 +4,7 @@ using UnityEngine;
 using Warudo.Core;
 using Warudo.Core.Attributes;
 using Warudo.Core.Data;
+using Warudo.Core.Localization;
 using Warudo.Core.Utils;
 using Warudo.Plugins.Core.Utils;
 using Object = UnityEngine.Object;

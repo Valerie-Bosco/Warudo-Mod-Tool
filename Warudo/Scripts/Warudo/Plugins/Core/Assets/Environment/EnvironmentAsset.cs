@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using TwitchLib.PubSub.Models.Responses.Messages.AutomodCaughtMessage;
 using UMod;
 using UnityEngine;
 using UnityEngine.Rendering;

@@ -15,14 +15,14 @@ MonoBehaviour:
   toolsIconSmall: {fileID: 0}
   toolsIconLarge: {fileID: 0}
   toolsName: Warudo Mod Tools
-  toolsVersion: 0.14.3
+  toolsVersion: 0.14.4
   firstRunWindow:
     assemblyQualifiedName: 
   developerName: TigerHix
   syncDeveloperName: 0
   gameName: Warudo
   syncGameName: 0
-  gameVersion: 0.14.3
+  gameVersion: 0.14.4
   syncGameVersion: 0
   modFileExtension: .warudo
   commandLineLaunchFormat: +mod=$PATH
@@ -51,18 +51,6 @@ MonoBehaviour:
       windowType:
         assemblyQualifiedName: UMod.Exporter.CreateModWindow, UMod-Exporter, Version=1.0.0.0,
           Culture=neutral, PublicKeyToken=null
-    - menuEntryName: Create/Prefab Node
-      menuAction: 1
-      enabled: 0
-      isSeparator: 0
-      windowType:
-        assemblyQualifiedName: 
-    - menuEntryName: Create/Material Node
-      menuAction: 2
-      enabled: 0
-      isSeparator: 0
-      windowType:
-        assemblyQualifiedName: 
     - menuEntryName: 
       menuAction: 0
       enabled: 1
@@ -89,6 +77,25 @@ MonoBehaviour:
       windowType:
         assemblyQualifiedName: Warudo.Editor.SetupCharacterWindow, Assembly-CSharp-Editor,
           Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - menuEntryName: 
+      menuAction: 0
+      enabled: 1
+      isSeparator: 1
+      windowType:
+        assemblyQualifiedName: 
+    - menuEntryName: Setup URP (Warudo Pro)
+      menuAction: 5
+      enabled: 0
+      isSeparator: 0
+      windowType:
+        assemblyQualifiedName: Warudo.Editor.SetupURPWindow, Assembly-CSharp-Editor,
+          Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    - menuEntryName: Item
+      menuAction: 0
+      enabled: 1
+      isSeparator: 1
+      windowType:
+        assemblyQualifiedName: 
     - menuEntryName: Mod Settings
       menuAction: 5
       enabled: 1
@@ -102,57 +109,6 @@ MonoBehaviour:
       isSeparator: 0
       windowType:
         assemblyQualifiedName: 
-    - menuEntryName: 
-      menuAction: 0
-      enabled: 0
-      isSeparator: 1
-      windowType:
-        assemblyQualifiedName: 
-    - menuEntryName: Build and Run %#r
-      menuAction: 4
-      enabled: 0
-      isSeparator: 0
-      windowType:
-        assemblyQualifiedName: 
-    - menuEntryName: Help
-      menuAction: 5
-      enabled: 0
-      isSeparator: 0
-      windowType:
-        assemblyQualifiedName: UMod.Exporter.HelpWindow, UMod-Exporter, Version=1.0.0.0,
-          Culture=neutral, PublicKeyToken=null
-    - menuEntryName: About
-      menuAction: 5
-      enabled: 0
-      isSeparator: 0
-      windowType:
-        assemblyQualifiedName: UMod.Exporter.AboutWindow, UMod-Exporter, Version=1.0.0.0,
-          Culture=neutral, PublicKeyToken=null
-    - menuEntryName: 
-      menuAction: 0
-      enabled: 0
-      isSeparator: 1
-      windowType:
-        assemblyQualifiedName: 
-    - menuEntryName: Referencing/Rebuild Reference Cache
-      menuAction: 6
-      enabled: 0
-      isSeparator: 0
-      windowType:
-        assemblyQualifiedName: 
-    - menuEntryName: 
-      menuAction: 0
-      enabled: 0
-      isSeparator: 1
-      windowType:
-        assemblyQualifiedName: 
-    - menuEntryName: Game Assets
-      menuAction: 5
-      enabled: 0
-      isSeparator: 0
-      windowType:
-        assemblyQualifiedName: UMod.Exporter.GameAssetsWindow, UMod-Exporter, Version=1.0.0.0,
-          Culture=neutral, PublicKeyToken=null
     readOnly: 0
   security:
     performBuildSecurityChecks: 1

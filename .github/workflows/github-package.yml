@@ -1,4 +1,4 @@
-name: Build and Release on Tag
+name: Publish Meta UPM on Tag
 
 on:
   push:
@@ -7,41 +7,108 @@ on:
 
 permissions:
   contents: write
-  
+
 jobs:
-  package-and-release:
-    runs-on: ubuntu-latest
+  publish-upm:
+    runs-on: windows-2022
 
     steps:
-      - name: Checkout code
+      - name: Checkout package repository
         uses: actions/checkout@v4
-
-      - name: Create package directory
-        run: mkdir -p package
-
-      - name: Copy all files to package directory
-        run: rsync -av --exclude='.git' --exclude='package' --exclude='.github' . package/
-
-      - name: Create tar.gz archive
-        run: tar czf Warudo-Mod-Tool-${{ github.ref_name }}.tgz package
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Warudo Mod Tool ${{ github.ref_name }}
-          draft: false
-          prerelease: false
+          fetch-depth: 0
+          path: package-repo
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout template Unity project
+        uses: actions/checkout@v4
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./Warudo-Mod-Tool-${{ github.ref_name }}.tgz
-          asset_name: Warudo-Mod-Tool-${{ github.ref_name }}.tgz
-          asset_content_type: application/gzip
+          repository: HakuyaLabs/ModTools-TemplateProject
+          token: ${{ secrets.GH_PAT }}
+          path: template-project
+
+      - name: Generate meta-preserving UPM tree with Unity
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: template-project
+          unityVersion: auto
+          targetPlatform: StandaloneWindows64
+          buildMethod: CI.UpmMetaPublisher.Run
+          customParameters: -packageSource "${{ github.workspace }}/package-repo" -publishRoot "${{ github.workspace }}/generated-upm"
+          allowDirtyBuild: true
+
+      - name: Verify generated UPM output
+        shell: pwsh
+        run: |
+          if (!(Test-Path "generated-upm")) {
+            throw "Unity did not generate the generated-upm directory."
+          }
+
+          if (!(Test-Path "generated-upm/package.json")) {
+            throw "Generated UPM output is missing package.json."
+          }
+
+      - name: Publish generated UPM branch
+        shell: pwsh
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $packageRepo = Join-Path $env:GITHUB_WORKSPACE "package-repo"
+          $branchName = "upm/$env:TAG_NAME"
+          $publishSource = Join-Path $env:GITHUB_WORKSPACE "generated-upm"
+          $worktreePath = Join-Path $env:RUNNER_TEMP "upm-branch"
+
+          if (Test-Path $worktreePath) {
+            Remove-Item -LiteralPath $worktreePath -Recurse -Force
+          }
+
+          Push-Location $packageRepo
+          try {
+          $branchExists = $true
+          git ls-remote --exit-code --heads origin $branchName *> $null
+          if ($LASTEXITCODE -ne 0) {
+            $branchExists = $false
+          }
+
+          if ($branchExists) {
+            git fetch origin $branchName
+            git worktree add -b $branchName $worktreePath "refs/remotes/origin/$branchName"
+            Push-Location $worktreePath
+          }
+          else {
+            git worktree add --detach $worktreePath
+            Push-Location $worktreePath
+            git switch --orphan $branchName
+          }
+
+          try {
+            Get-ChildItem -Force | Where-Object { $_.Name -ne ".git" } | Remove-Item -Recurse -Force
+
+            Copy-Item -Path (Join-Path $publishSource "*") -Destination . -Recurse -Force
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add --all
+
+            git diff --cached --quiet
+            if ($LASTEXITCODE -eq 0) {
+              Write-Host "No UPM changes detected for $branchName."
+              exit 0
+            }
+
+            git commit -m "Publish meta UPM for $env:TAG_NAME"
+            git push origin "HEAD:refs/heads/$branchName"
+          }
+          finally {
+            Pop-Location
+          }
+          }
+          finally {
+            Pop-Location
+          }

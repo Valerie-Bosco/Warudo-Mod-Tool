@@ -185,6 +185,8 @@ namespace Warudo.Plugins.Core.Assets.Character
         }
 
         protected bool HideMagicaCloth2() => throw new NotImplementedException();
+        public bool UseVrm10Instances = false;
+        protected bool HideVRMSection() => throw new NotImplementedException();
         public string[] TrackingAssetIds;
         public string[] TrackingGraphIds;
         public string ExpressionKeyBindingGraphId;

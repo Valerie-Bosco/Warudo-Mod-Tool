@@ -54,6 +54,7 @@ namespace Warudo.Plugins.Core.Assets.Cinematography
         public float NearClipPlane = 0.01f;
         public float FarClipPlane = 5000f;
         public bool OrthographicProjection = false;
+        public bool ForceClearBackground = false;
         public string OutputHint = "CAMERA_OUTPUT_HINT".Localized();
         public bool SpoutOutput;
         public string SpoutOutputMessage = "";
@@ -82,6 +83,7 @@ namespace Warudo.Plugins.Core.Assets.Cinematography
         public float NoiseAmplitude = 0.5f;
         public float NoiseFrequency = 1f;
         protected bool HideBiRPPostprocessingOptions() => throw new NotImplementedException();
+        protected bool HideURPPostprocessingOptions() => throw new NotImplementedException();
         public string LUTTexture;
         public void LUTOpenImagesFolder()
         {

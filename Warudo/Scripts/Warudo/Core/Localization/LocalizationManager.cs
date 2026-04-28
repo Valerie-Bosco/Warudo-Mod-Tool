@@ -16,6 +16,10 @@ namespace Warudo.Core.Localization {
         private string activeLanguage = "en";
         private readonly Dictionary<string, Dictionary<string, string>> localizedStrings = new();
         private readonly Dictionary<string, string> supportLanguages = new() {};
+        private readonly Dictionary<string, string> fallbackMapping = new()
+        {
+            {"zh_Hant", "zh_CN" }
+        };
 
         public async UniTask LoadAndMonitorLocalizations() {
             localizationMonitor = new LocalizationMonitor(Application.streamingAssetsPath + "/Localizations");
@@ -64,8 +68,21 @@ namespace Warudo.Core.Localization {
             if (!localizedStrings.ContainsKey(key)) {
                 return key;
             }
-            return localizedStrings[key].ContainsKey(language) ? localizedStrings[key][language] : 
-                (localizedStrings[key].ContainsKey("en") ? localizedStrings[key]["en"] : key);
+            if (localizedStrings[key].ContainsKey(language))
+            {
+                return localizedStrings[key][language];
+            }
+            else
+            {
+                if (fallbackMapping.ContainsKey(language))
+                {
+                    if (localizedStrings[key].ContainsKey(fallbackMapping[language]))
+                    {
+                        return localizedStrings[key][fallbackMapping[language]];
+                    }
+                }
+                return localizedStrings[key].ContainsKey("en") ? localizedStrings[key]["en"] : key;
+            }
         }
 
         public string GetTranslator()

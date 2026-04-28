@@ -1,5 +1,4 @@
-﻿#define VERBATIM
-
+#define VERBATIM
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,13 +9,16 @@ using VRM;
 using Warudo.Core.Utils;
 using Object = UnityEngine.Object;
 
-namespace Warudo.Plugins.Core.Assets.Character {
+namespace Warudo.Plugins.Core.Assets.Character
+{
     // Much of the code here is brought from UniVRM. Thanks!
-    public static class BoneNormalization {
-        public static void Apply(GameObject go, Animator animator) {
-            var (normalized, boneMap) = NormalizeHierarchy(go, animator);
-
-            foreach (var src in go.transform.Traverse()) {
+    public static class BoneNormalization
+    {
+        public static void Apply(GameObject go, Animator animator)
+        {
+            var(normalized, boneMap) = NormalizeHierarchy(go, animator);
+            foreach (var src in go.transform.Traverse())
+            {
                 Transform dst;
                 if (!boneMap.TryGetValue(src, out dst))
                 {
@@ -26,62 +28,58 @@ namespace Warudo.Plugins.Core.Assets.Character {
                 NormalizeSkinnedMesh(src, dst, boneMap);
                 NormalizeNoneSkinnedMesh(src, dst);
             }
-            
-            foreach (var (fromBone, toBone) in boneMap) {
+
+            foreach (var(fromBone, toBone)in boneMap)
+            {
                 fromBone.localRotation = toBone.localRotation;
                 fromBone.localPosition = toBone.localPosition;
             }
 
-            if (Application.isPlaying) {
+            if (Application.isPlaying)
+            {
                 // Reset dynamic bones
                 go.GetComponentsInChildren<DynamicBone>().ForEach(it => it.SetupParticles());
             }
 
             // Rebuild avatar, and reset bones again.
             // I don't know why this works.jpg
-            
             var avatar = BuildAvatarDescription(go, animator, boneMap).CreateAvatarAndSetup(go.transform);
             avatar.name = go.name + ".normalized";
             animator.avatar = avatar;
-            
-            foreach (var (fromBone, toBone) in boneMap) {
+            foreach (var(fromBone, toBone)in boneMap)
+            {
                 fromBone.localRotation = toBone.localRotation;
                 fromBone.localPosition = toBone.localPosition;
             }
-            
-            if (Application.isEditor) {
+
+            if (Application.isEditor)
+            {
                 Object.DestroyImmediate(normalized);
-            } else {
+            }
+            else
+            {
                 Object.Destroy(normalized);
             }
         }
-        
+
         private static (GameObject, Dictionary<Transform, Transform>) NormalizeHierarchy(GameObject go, Animator animator)
         {
             var boneMap = new Dictionary<Transform, Transform>();
             var normalized = new GameObject(go.name + "(normalized)");
             normalized.transform.position = go.transform.position;
             CopyAndBuild(go.transform, normalized.transform, boneMap);
-
             var avatarDescription = BuildAvatarDescription(go, animator, boneMap);
             var avatar = avatarDescription.CreateAvatarAndSetup(go.transform);
             avatar.name = go.name + ".normalized";
-
             return (normalized, boneMap);
         }
 
-        private static AvatarDescription BuildAvatarDescription(GameObject go, Animator animator, Dictionary<Transform, Transform> boneMap) {
-            var srcHumanBones = Enum.GetValues(typeof(HumanBodyBones))
-                .Cast<HumanBodyBones>()
-                .Where(x => x != HumanBodyBones.LastBone)
-                .Select(x => new { Key = x, Value = animator.GetBoneTransform(x) })
-                .Where(x => x.Value != null);
-
-            var map =
-                srcHumanBones
-                    .Where(x => boneMap.ContainsKey(x.Value))
-                    .ToDictionary(x => x.Key, x => boneMap[x.Value]);
-            
+        private static AvatarDescription BuildAvatarDescription(GameObject go, Animator animator, Dictionary<Transform, Transform> boneMap)
+        {
+            var srcHumanBones = Enum.GetValues(typeof(HumanBodyBones)).Cast<HumanBodyBones>().Where(x => x != HumanBodyBones.LastBone).Select(x => new
+            {
+            Key = x, Value = animator.GetBoneTransform(x)}).Where(x => x.Value != null);
+            var map = srcHumanBones.Where(x => boneMap.ContainsKey(x.Value)).ToDictionary(x => x.Key, x => boneMap[x.Value]);
             var vrmHuman = go.GetComponent<VRMHumanoidDescription>();
             var avatarDescription = AvatarDescription.Create();
             if (vrmHuman != null && vrmHuman.Description != null)
@@ -95,15 +93,14 @@ namespace Warudo.Plugins.Core.Assets.Character {
                 avatarDescription.feetSpacing = vrmHuman.Description.feetSpacing;
                 avatarDescription.hasTranslationDoF = vrmHuman.Description.hasTranslationDoF;
             }
-            avatarDescription.SetHumanBones(map);
 
+            avatarDescription.SetHumanBones(map);
             return avatarDescription;
         }
 
         private static void CopyAndBuild(Transform src, Transform dst, Dictionary<Transform, Transform> boneMap)
         {
             boneMap[src] = dst;
-
             foreach (Transform child in src)
             {
                 if (child.gameObject.activeSelf)
@@ -111,77 +108,56 @@ namespace Warudo.Plugins.Core.Assets.Character {
                     var dstChild = new GameObject(child.name);
                     dstChild.transform.SetParent(dst);
                     dstChild.transform.position = child.position; // copy position only
-
                     CopyAndBuild(child, dstChild.transform, boneMap);
                 }
             }
-        } 
+        }
 
-        private static void NormalizeSkinnedMesh(Transform src, Transform dst, Dictionary<Transform, Transform> boneMap) {
+        private static void NormalizeSkinnedMesh(Transform src, Transform dst, Dictionary<Transform, Transform> boneMap)
+        {
             var srcRenderer = src.GetComponent<SkinnedMeshRenderer>();
-            if (srcRenderer == null
-                || !srcRenderer.enabled
-                || srcRenderer.sharedMesh == null
-                || srcRenderer.sharedMesh.vertexCount == 0)
+            if (srcRenderer == null || !srcRenderer.enabled || srcRenderer.sharedMesh == null || srcRenderer.sharedMesh.vertexCount == 0)
             {
                 // 有効なSkinnedMeshRendererが無かった
                 return;
             }
-            
+
             var srcMesh = srcRenderer.sharedMesh;
             var originalSrcMesh = srcMesh;
-            
             // 元の Transform[] bones から、無効なboneを取り除いて前に詰めた配列を作る
-            var dstBones = srcRenderer.bones
-                .Where(x => x != null && boneMap.ContainsKey(x))
-                .Select(x => boneMap[x])
-                .ToArray();
-            
+            var dstBones = srcRenderer.bones.Where(x => x != null && boneMap.ContainsKey(x)).Select(x => boneMap[x]).ToArray();
             var hasBoneWeight = srcRenderer.bones != null && srcRenderer.bones.Length > 0;
-            if (!hasBoneWeight) {
+            if (!hasBoneWeight)
+            {
                 srcMesh = srcMesh.Copy(true);
-                var bw = new BoneWeight
-                {
-                    boneIndex0 = 0,
-                    boneIndex1 = 0,
-                    boneIndex2 = 0,
-                    boneIndex3 = 0,
-                    weight0 = 1.0f,
-                    weight1 = 0.0f,
-                    weight2 = 0.0f,
-                    weight3 = 0.0f,
-                };
+                var bw = new BoneWeight{boneIndex0 = 0, boneIndex1 = 0, boneIndex2 = 0, boneIndex3 = 0, weight0 = 1.0f, weight1 = 0.0f, weight2 = 0.0f, weight3 = 0.0f, };
                 srcMesh.boneWeights = Enumerable.Range(0, srcMesh.vertexCount).Select(x => bw).ToArray();
-                srcMesh.bindposes = new[] { Matrix4x4.identity };
-
+                srcMesh.bindposes = new[]{Matrix4x4.identity};
                 var smrTransform = srcRenderer.transform;
                 srcRenderer.rootBone = smrTransform;
-                srcRenderer.bones = new[] { smrTransform };
+                srcRenderer.bones = new[]{smrTransform};
                 srcRenderer.sharedMesh = srcMesh;
             }
 
             var mesh = srcMesh.Copy(false);
             mesh.name = srcMesh.name + ".normalized";
             srcRenderer.BakeMesh(mesh);
-            
             var blendShapeValues = new Dictionary<int, float>();
             for (var i = 0; i < srcMesh.blendShapeCount; i++)
             {
                 var val = srcRenderer.GetBlendShapeWeight(i);
-                if (val > 0) blendShapeValues.Add(i, val);
+                if (val > 0)
+                    blendShapeValues.Add(i, val);
             }
 
             // 新しい骨格のボーンウェイトを作成する
             mesh.boneWeights = MapBoneWeight(srcMesh.boneWeights, boneMap, srcRenderer.bones, dstBones);
-            
             // recalc bindposes
             mesh.bindposes = dstBones.Select(x => x.worldToLocalMatrix * dst.transform.localToWorldMatrix).ToArray();
-
             //var m = src.localToWorldMatrix; // include scaling
             var m = default(Matrix4x4);
             m.SetTRS(Vector3.zero, src.rotation, Vector3.one); // rotation only
             mesh.ApplyMatrix(m);
-
             // clear blendShape always
             var backcup = new List<float>();
             for (int i = 0; i < srcMesh.blendShapeCount; ++i)
@@ -195,11 +171,9 @@ namespace Warudo.Plugins.Core.Assets.Character {
 #if VRM_NORMALIZE_BLENDSHAPE_TANGENT
             var meshTangents = mesh.tangents.Select(x => (Vector3)x).ToArray();
 #endif
-
             var originalBlendShapePositions = new Vector3[meshVertices.Length];
             var originalBlendShapeNormals = new Vector3[meshVertices.Length];
             var originalBlendShapeTangents = new Vector3[meshVertices.Length];
-
             var blendShapeMesh = new Mesh();
             for (int i = 0; i < srcMesh.blendShapeCount; ++i)
             {
@@ -227,9 +201,7 @@ namespace Warudo.Plugins.Core.Assets.Character {
 
                 var value = blendShapeValues.ContainsKey(i) ? blendShapeValues[i] : 0;
                 srcRenderer.SetBlendShapeWeight(i, value);
-
                 Vector3[] vertices = blendShapeMesh.vertices;
-
                 for (int j = 0; j < vertices.Length; ++j)
                 {
                     if (originalBlendShapePositions[j] == Vector3.zero)
@@ -248,7 +220,6 @@ namespace Warudo.Plugins.Core.Assets.Character {
                     if (originalBlendShapeNormals[j] == Vector3.zero)
                     {
                         normals[j] = Vector3.zero;
-
                     }
                     else
                     {
@@ -270,53 +241,37 @@ namespace Warudo.Plugins.Core.Assets.Character {
                     }
                 }
 #endif
-
                 var frameCount = srcMesh.GetBlendShapeFrameCount(i);
                 for (int f = 0; f < frameCount; f++)
                 {
-
                     var weight = srcMesh.GetBlendShapeFrameWeight(i, f);
-
                     try
                     {
-                        mesh.AddBlendShapeFrame(name,
-                            weight,
-                            vertices,
-                            hasNormals > 0 ? normals : null,
-                            hasTangents > 0 ? tangents : null
-                            );
+                        mesh.AddBlendShapeFrame(name, weight, vertices, hasNormals > 0 ? normals : null, hasTangents > 0 ? tangents : null);
                     }
                     catch (Exception)
                     {
-                        Debug.LogErrorFormat("fail to mesh.AddBlendShapeFrame {0}.{1}",
-                            mesh.name,
-                            srcMesh.GetBlendShapeName(i)
-                            );
+                        Debug.LogErrorFormat("fail to mesh.AddBlendShapeFrame {0}.{1}", mesh.name, srcMesh.GetBlendShapeName(i));
                         throw;
                     }
                 }
             }
-            
-            // End of BlendShapes
 
+            // End of BlendShapes
             //srcRenderer.bones = dstBones;
             srcRenderer.sharedMesh = mesh;
-            
-
             if (!hasBoneWeight)
             {
                 // restore bones
-                srcRenderer.bones = new Transform[] { };
+                srcRenderer.bones = new Transform[]{};
                 srcRenderer.sharedMesh = originalSrcMesh;
             }
         }
-        
+
         private static void NormalizeNoneSkinnedMesh(Transform src, Transform dst)
         {
             var srcFilter = src.GetComponent<MeshFilter>();
-            if (srcFilter == null
-                || srcFilter.sharedMesh == null
-                || srcFilter.sharedMesh.vertexCount == 0)
+            if (srcFilter == null || srcFilter.sharedMesh == null || srcFilter.sharedMesh.vertexCount == 0)
             {
                 return;
             }
@@ -333,11 +288,7 @@ namespace Warudo.Plugins.Core.Assets.Character {
             srcFilter.sharedMesh = mesh;
         }
 
-        private static BoneWeight[] MapBoneWeight(BoneWeight[] src,
-            Dictionary<Transform, Transform> boneMap,
-            Transform[] srcBones,
-            Transform[] dstBones
-            )
+        private static BoneWeight[] MapBoneWeight(BoneWeight[] src, Dictionary<Transform, Transform> boneMap, Transform[] srcBones, Transform[] dstBones)
         {
             // 処理前後の index の対応表を作成する
             var indexMap = new int[srcBones.Length];
@@ -361,6 +312,7 @@ namespace Warudo.Plugins.Core.Assets.Character {
                             // ありえない。バグ
                             throw new Exception();
                         }
+
                         indexMap[i] = dstIndex;
                     }
                     else
@@ -377,7 +329,6 @@ namespace Warudo.Plugins.Core.Assets.Character {
             for (int i = 0; i < src.Length; ++i)
             {
                 BoneWeight srcBoneWeight = src[i];
-
                 // 0
                 CopyOrDropWeight(indexMap, srcBoneWeight.boneIndex0, srcBoneWeight.weight0, (newIndex, newWeight) =>
                 {
@@ -406,7 +357,7 @@ namespace Warudo.Plugins.Core.Assets.Character {
 
             return newBoneWeights;
         }
-        
+
         private static bool CopyOrDropWeight(int[] indexMap, int srcIndex, float weight, Action<int, float> setter)
         {
             if (srcIndex < 0 || srcIndex >= indexMap.Length)
