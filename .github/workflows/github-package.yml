@@ -38,7 +38,7 @@ jobs:
           targetPlatform: StandaloneWindows64
           buildMethod: CI.UpmMetaPublisher.Run
           customImage: unityci/editor:windows-2021.3.45f2-base-3.2.2
-          customParameters: -packageSource package-repo -publishRoot generated-upm
+          customParameters: -packageSource ../package-repo -publishRoot ../generated-upm
           allowDirtyBuild: true
 
       - name: Verify generated UPM output
