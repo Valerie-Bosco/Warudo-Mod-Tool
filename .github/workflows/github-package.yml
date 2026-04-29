@@ -25,7 +25,6 @@ jobs:
           repository: HakuyaLabs/ModTools-TemplateProject
           token: ${{ secrets.GH_PAT }}
           path: template-project
-
       - name: Generate meta-preserving UPM tree with Unity
         uses: game-ci/unity-builder@v4
         env:
@@ -36,7 +35,7 @@ jobs:
           projectPath: template-project
           unityVersion: auto
           targetPlatform: StandaloneWindows64
-          buildMethod: CI.UpmMetaPublisher.Run
+          buildMethod: CI.PackageImportAndPublish.Run
           customImage: unityci/editor:windows-2021.3.45f2-base-3.2.2
           customParameters: -packageSource ../package-repo -publishRoot ../generated-upm
           allowDirtyBuild: true
