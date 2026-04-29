@@ -42,6 +42,32 @@ jobs:
           New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
           Copy-Item -LiteralPath $source -Destination $target -Force
 
+      - name: Ensure template project has required Unity package dependencies
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $manifestPath = Join-Path $env:GITHUB_WORKSPACE "template-project/Packages/manifest.json"
+          if (!(Test-Path $manifestPath)) {
+            throw "Template project manifest not found: $manifestPath"
+          }
+
+          $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+          if ($null -eq $manifest.dependencies) {
+            $manifest | Add-Member -NotePropertyName dependencies -NotePropertyValue ([ordered]@{})
+          }
+
+          $requiredDependencies = [ordered]@{
+            "com.unity.timeline" = "1.7.6"
+            "com.unity.textmeshpro" = "3.0.6"
+          }
+
+          foreach ($dependency in $requiredDependencies.GetEnumerator()) {
+            $manifest.dependencies | Add-Member -NotePropertyName $dependency.Key -NotePropertyValue $dependency.Value -Force
+          }
+
+          $manifest | ConvertTo-Json -Depth 100 | Set-Content $manifestPath -Encoding utf8
+
       - name: Generate meta-preserving UPM tree with Unity
         uses: game-ci/unity-builder@v4
         env:
