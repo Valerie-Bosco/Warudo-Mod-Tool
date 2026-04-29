@@ -57,7 +57,7 @@ namespace CI
 
         private static string GetEmbeddedPackagePath(string packageName)
         {
-            var packageInfo = PackageInfo.GetAllRegisteredPackages()
+            var packageInfo = UnityEditor.PackageManager.PackageInfo.GetAllRegisteredPackages()
                 .FirstOrDefault(p => string.Equals(p.name, packageName, StringComparison.OrdinalIgnoreCase));
 
             if (packageInfo == null || string.IsNullOrWhiteSpace(packageInfo.resolvedPath))
