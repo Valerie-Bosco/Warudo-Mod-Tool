@@ -61,29 +61,39 @@ jobs:
           $packageRepo = Join-Path $env:GITHUB_WORKSPACE "package-repo"
           $branchName = "upm/$env:TAG_NAME"
           $publishSource = Join-Path $env:GITHUB_WORKSPACE "generated-upm"
-          $worktreePath = Join-Path $env:RUNNER_TEMP "upm-branch"
+          $latestBranchName = "upm/latest"
+          $worktreeRoot = Join-Path $env:RUNNER_TEMP "upm-branches"
 
-          if (Test-Path $worktreePath) {
-            Remove-Item -LiteralPath $worktreePath -Recurse -Force
-          }
+          New-Item -ItemType Directory -Path $worktreeRoot -Force | Out-Null
 
-          Push-Location $packageRepo
-          try {
+          function Publish-UpmBranch {
+            param(
+              [string]$TargetBranch,
+              [string]$CommitMessage
+            )
+
+            $safeBranchDirName = $TargetBranch -replace '[^a-zA-Z0-9._-]', '_'
+            $worktreePath = Join-Path $worktreeRoot $safeBranchDirName
+
+            if (Test-Path $worktreePath) {
+              Remove-Item -LiteralPath $worktreePath -Recurse -Force
+            }
+
             $branchExists = $true
-            git ls-remote --exit-code --heads origin $branchName *> $null
+            git ls-remote --exit-code --heads origin $TargetBranch *> $null
             if ($LASTEXITCODE -ne 0) {
               $branchExists = $false
             }
 
             if ($branchExists) {
-              git fetch origin $branchName
-              git worktree add -b $branchName $worktreePath "refs/remotes/origin/$branchName"
+              git fetch origin $TargetBranch
+              git worktree add -b $TargetBranch $worktreePath "refs/remotes/origin/$TargetBranch"
               Push-Location $worktreePath
             }
             else {
               git worktree add --detach $worktreePath
               Push-Location $worktreePath
-              git switch --orphan $branchName
+              git switch --orphan $TargetBranch
             }
 
             try {
@@ -91,22 +101,29 @@ jobs:
 
               Copy-Item -Path (Join-Path $publishSource "*") -Destination . -Recurse -Force
 
-              git config user.name "github-actions[bot]"
-              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
               git add --all
 
               git diff --cached --quiet
               if ($LASTEXITCODE -eq 0) {
-                Write-Host "No UPM changes detected for $branchName."
-                exit 0
+                Write-Host "No UPM changes detected for $TargetBranch."
+                return
               }
 
-              git commit -m "Publish meta UPM for $env:TAG_NAME"
-              git push origin "HEAD:refs/heads/$branchName"
+              git commit -m $CommitMessage
+              git push origin "HEAD:refs/heads/$TargetBranch"
             }
             finally {
               Pop-Location
             }
+          }
+
+          Push-Location $packageRepo
+          try {
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+            Publish-UpmBranch -TargetBranch $branchName -CommitMessage "Publish meta UPM for $env:TAG_NAME"
+            Publish-UpmBranch -TargetBranch $latestBranchName -CommitMessage "Publish meta UPM latest from $env:TAG_NAME"
           }
           finally {
             Pop-Location
@@ -141,6 +158,7 @@ jobs:
 
       - name: Prepare release notes from commit message
         shell: pwsh
+        working-directory: package-repo
         run: |
           $ErrorActionPreference = "Stop"
 
