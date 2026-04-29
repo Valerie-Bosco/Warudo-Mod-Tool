@@ -1,11 +1,7 @@
 using System;
 using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
 using UnityEditor;
-using UnityEditor.PackageManager;
-using UnityEditor.PackageManager.Requests;
 
 namespace CI
 {
@@ -28,17 +24,9 @@ namespace CI
 
             var packageName = ReadPackageName(packageJsonPath);
 
-            var packageFileUri = "file:" + packageSourceFullPath.Replace('\\', '/');
-            var addRequest = Client.Add(packageFileUri);
-            WaitForRequest(addRequest, "PackageManager.Client.Add");
-
-            var embedRequest = Client.Embed(packageName);
-            WaitForRequest(embedRequest, "PackageManager.Client.Embed");
-
-            var embeddedPackagePath = GetEmbeddedPackagePath(packageName);
+            var embeddedPackagePath = StageAsEmbeddedPackage(packageSourceFullPath, packageName);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
             SyncMetaFiles(embeddedPackagePath, packageSourceFullPath);
-
-            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
 
             UpmMetaPublisher.Run();
         }
@@ -55,17 +43,44 @@ namespace CI
             return match.Groups[1].Value;
         }
 
-        private static string GetEmbeddedPackagePath(string packageName)
+        private static string StageAsEmbeddedPackage(string sourceRoot, string packageName)
         {
-            var packageInfo = UnityEditor.PackageManager.PackageInfo.GetAllRegisteredPackages()
-                .FirstOrDefault(p => string.Equals(p.name, packageName, StringComparison.OrdinalIgnoreCase));
+            var projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            var packagesRoot = Path.Combine(projectRoot, "Packages");
+            var safeName = packageName.Replace('/', '.').Replace('\\', '.');
+            var stagedRoot = Path.Combine(packagesRoot, $"__ci_embed_{safeName}");
 
-            if (packageInfo == null || string.IsNullOrWhiteSpace(packageInfo.resolvedPath))
+            if (Directory.Exists(stagedRoot))
             {
-                throw new Exception($"Unable to resolve embedded package path for: {packageName}");
+                Directory.Delete(stagedRoot, true);
             }
 
-            return Path.GetFullPath(packageInfo.resolvedPath);
+            var stagedMeta = stagedRoot + ".meta";
+            if (File.Exists(stagedMeta))
+            {
+                File.Delete(stagedMeta);
+            }
+
+            CopyDirectory(sourceRoot, stagedRoot);
+
+            return stagedRoot;
+        }
+
+        private static void CopyDirectory(string sourceDir, string destinationDir)
+        {
+            Directory.CreateDirectory(destinationDir);
+
+            foreach (var filePath in Directory.GetFiles(sourceDir))
+            {
+                var destinationPath = Path.Combine(destinationDir, Path.GetFileName(filePath));
+                File.Copy(filePath, destinationPath, true);
+            }
+
+            foreach (var subDir in Directory.GetDirectories(sourceDir))
+            {
+                var destinationSubDir = Path.Combine(destinationDir, Path.GetFileName(subDir));
+                CopyDirectory(subDir, destinationSubDir);
+            }
         }
 
         private static void SyncMetaFiles(string fromRoot, string toRoot)
@@ -110,17 +125,5 @@ namespace CI
             return null;
         }
 
-        private static void WaitForRequest(Request request, string operation)
-        {
-            while (!request.IsCompleted)
-            {
-                Thread.Sleep(100);
-            }
-
-            if (request.Status == StatusCode.Failure)
-            {
-                throw new Exception($"{operation} failed: {request.Error?.message}");
-            }
-        }
     }
 }
