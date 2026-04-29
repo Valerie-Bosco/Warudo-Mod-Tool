@@ -25,6 +25,23 @@ jobs:
           repository: HakuyaLabs/ModTools-TemplateProject
           token: ${{ secrets.GH_PAT }}
           path: template-project
+
+      - name: Inject CI build method into template project
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $source = Join-Path $env:GITHUB_WORKSPACE "package-repo/.github/workflows/ci/PackageImportAndPublish.cs"
+          $targetDir = Join-Path $env:GITHUB_WORKSPACE "template-project/Assets/Editor"
+          $target = Join-Path $targetDir "PackageImportAndPublish.cs"
+
+          if (!(Test-Path $source)) {
+            throw "CI build method source file not found: $source"
+          }
+
+          New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+          Copy-Item -LiteralPath $source -Destination $target -Force
+
       - name: Generate meta-preserving UPM tree with Unity
         uses: game-ci/unity-builder@v4
         env:
