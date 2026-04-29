@@ -26,14 +26,14 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           path: template-project
 
-      - name: Inject CI build method into template project
+      - name: Inject CI.RefreshAssets into template project
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
 
-          $source = Join-Path $env:GITHUB_WORKSPACE "package-repo/.github/workflows/ci/PackageImportAndPublish.cs"
+          $source = Join-Path $env:GITHUB_WORKSPACE "package-repo/.github/workflows/ci/RefreshAssets.cs"
           $targetDir = Join-Path $env:GITHUB_WORKSPACE "template-project/Assets/Editor"
-          $target = Join-Path $targetDir "PackageImportAndPublish.cs"
+          $target = Join-Path $targetDir "RefreshAssets.cs"
 
           if (!(Test-Path $source)) {
             throw "CI build method source file not found: $source"
@@ -52,7 +52,7 @@ jobs:
           projectPath: template-project
           unityVersion: auto
           targetPlatform: StandaloneWindows64
-          buildMethod: CI.PackageImportAndPublish.Run
+          buildMethod: CI.RefreshAssets.Run
           customImage: unityci/editor:windows-2021.3.45f2-base-3.2.2
           customParameters: -packageSource ../package-repo -publishRoot ../generated-upm
           allowDirtyBuild: true
